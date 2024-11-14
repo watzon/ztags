@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 
 fn tagKind(tree: *std.zig.ast.Tree, node: *std.zig.ast.Node) u8 {
     return switch (node.id) {
@@ -58,7 +59,7 @@ const ParseArgs = struct {
     path: []const u8,
     scope_field_name: []const u8,
     scope: []const u8,
-    tags_file_stream: *std.fs.File.OutStream.Stream,
+    tags_file_stream: std.fs.File.OutStream,
 };
 
 fn findTags(args: *const ParseArgs) ErrorSet!void {
@@ -147,11 +148,10 @@ pub fn main() !void {
     };
     defer allocator.free(path);
 
-    const source = try std.io.readFileAlloc(allocator, path);
+    const source = try std.fs.cwd().readFileAlloc(allocator, path, math.maxInt(usize));
     defer allocator.free(source);
 
     var stdout_file = std.io.getStdOut();
-    const stdout = &stdout_file.outStream().stream;
 
     var tree = try std.zig.parse(allocator, source);
     defer tree.deinit();
@@ -166,7 +166,7 @@ pub fn main() !void {
             .path = path,
             .scope_field_name = "",
             .scope = "",
-            .tags_file_stream = stdout,
+            .tags_file_stream = std.io.getStdOut().outStream(),
         };
         try findTags(&child_args);
     }
